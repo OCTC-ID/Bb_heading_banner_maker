@@ -9,7 +9,7 @@ Small tools for building Blackboard Ultra courses at OCTC. Each one makes a PNG 
 | Course Banner Maker | The banner at the top of a course: a title, an optional subtitle such as the term, in navy or gold | https://octc-id.github.io/Bb_tools/course-banner/ |
 | Heading Banner Maker | Level 1, 2, and 3 heading banners for pages inside a course | https://octc-id.github.io/Bb_tools/headings/ |
 
-Both tools offer the Collegiate, Varsity, Minimal, and Playful styles. The course banner maker adds three more: Plate, Band, and Label.
+Both tools offer the Collegiate, Varsity, Minimal, and Playful styles. The heading banner maker adds Collegiate Gold (the Collegiate layout on a gold field, with no navy). The course banner maker adds Plate, Band, and Label.
 
 ## Sizes
 

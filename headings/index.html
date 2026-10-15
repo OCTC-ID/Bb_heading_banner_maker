@@ -135,6 +135,8 @@
   footer { font-size: 14px; color: var(--muted); padding-top: 16px; border-top: 1px solid var(--line); }
   @media (max-width: 620px) { .picks.two, .tools { grid-template-columns: minmax(0, 1fr); } }
   .picks.four { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .picks.five { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+  @media (max-width: 760px) { .picks.five { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
   @media (max-width: 760px) { .picks.four { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 </style>
 </head>
@@ -155,8 +157,9 @@
 
   <section>
     <h2>Style</h2>
-    <div class="picks four">
+    <div class="picks five">
       <button type="button" class="pick" id="style-collegiate" aria-pressed="true"><img id="sthumb-collegiate" alt=""><span>Collegiate</span></button>
+      <button type="button" class="pick" id="style-collegiate-gold" aria-pressed="false"><img id="sthumb-collegiate-gold" alt=""><span>Collegiate Gold</span></button>
       <button type="button" class="pick" id="style-varsity" aria-pressed="false"><img id="sthumb-varsity" alt=""><span>Varsity</span></button>
       <button type="button" class="pick" id="style-minimal" aria-pressed="false"><img id="sthumb-minimal" alt=""><span>Minimal</span></button>
       <button type="button" class="pick" id="style-playful" aria-pressed="false"><img id="sthumb-playful" alt=""><span>Playful</span></button>
@@ -227,7 +230,7 @@
   var L1_H = 120;        // Level 1 is a slim filled title strip
   var PAD = 3;           // white margin kept above and below Level 2 and 3 artwork
   var SCRATCH_H = 300;   // Level 2 and 3 are drawn on a tall canvas, then cropped to their content
-  var STYLE_NAMES = ['collegiate', 'varsity', 'minimal', 'playful'];
+  var STYLE_NAMES = ['collegiate', 'collegiate-gold', 'varsity', 'minimal', 'playful'];
 
   var state = { style: 'collegiate', level: 1 };
   var el = function (id) { return document.getElementById(id); };
@@ -343,40 +346,49 @@
   var BARLOW = '"Barlow Condensed", "Arial Narrow", Arial, sans-serif';
   var SOURCE = '"Source Sans 3", "Segoe UI", Arial, sans-serif';
 
-  // Level 1 functions draw a strip L1_H tall. Level 2 and 3 functions draw from the top
-  // (with PAD above the tallest letters) and return the y of their lowest mark; the image
-  // is then cropped to that plus PAD.
-  var STYLES = {
-    // Double gold keyline, diamond ornaments, double rules.
-    collegiate: {
+  // Collegiate layout, drawn in the colors given.
+  // c: field and text1 (Level 1 strip and its text), trim (keylines and Level 1 ornaments),
+  // text (Level 2 and 3 text), heavy and light (Level 2 rules), mark and hair (Level 3).
+  function collegiate(c) {
+    return {
       1: function (ctx) {
-        fill(ctx, L1_H, BLUE); frame(ctx, 7, L1_H, 3, GOLD); frame(ctx, 13, L1_H, 1, GOLD);
-        var o = { size: 34, max: 760, family: FRANKLIN, bw: 700, lw: 400, bc: WHITE, lc: WHITE, ls: 0.08 };
+        fill(ctx, L1_H, c.field); frame(ctx, 7, L1_H, 3, c.trim); frame(ctx, 13, L1_H, 1, c.trim);
+        var o = { size: 34, max: 760, family: FRANKLIN, bw: 700, lw: 400, bc: c.text1, lc: c.text1, ls: 0.08 };
         var m = measure(ctx, o), cy = L1_H / 2, flank = true;
         // A long heading drops the side ornaments so it can use the full width instead of shrinking.
         if (m.s < o.size * 0.85) { o.max = W - 80; m = measure(ctx, o); flank = false; }
         var t = draw(ctx, m, o, W / 2 - m.total / 2, cy + m.cap / 2);
         if (flank && t.left - 110 > 24) {
-          bar(ctx, t.left - 110, cy - 1, t.left - 34, 2, GOLD); diamond(ctx, t.left - 22, cy, 6, GOLD);
-          diamond(ctx, t.right + 22, cy, 6, GOLD); bar(ctx, t.right + 34, cy - 1, t.right + 110, 2, GOLD);
+          bar(ctx, t.left - 110, cy - 1, t.left - 34, 2, c.trim); diamond(ctx, t.left - 22, cy, 6, c.trim);
+          diamond(ctx, t.right + 22, cy, 6, c.trim); bar(ctx, t.right + 34, cy - 1, t.right + 110, 2, c.trim);
         }
       },
       2: function (ctx) {
         fill(ctx, SCRATCH_H, WHITE);
-        var o = { size: 28, max: W - 4, family: FRANKLIN, bw: 700, lw: 400, bc: BLUE, lc: BLUE, ls: 0.08 };
+        var o = { size: 28, max: W - 4, family: FRANKLIN, bw: 700, lw: 400, bc: c.text, lc: c.text, ls: 0.08 };
         var m = measure(ctx, o), t = draw(ctx, m, o, 0, PAD + m.asc);
-        bar(ctx, 0, t.bottom + 6, W, 3, NAVY); bar(ctx, 0, t.bottom + 12, W, 2, GOLD);
+        bar(ctx, 0, t.bottom + 6, W, 3, c.heavy); bar(ctx, 0, t.bottom + 12, W, 2, c.light);
         return t.bottom + 14;
       },
       3: function (ctx) {
         fill(ctx, SCRATCH_H, WHITE);
-        var o = { size: 21, max: W - 70, family: FRANKLIN, bw: 700, lw: 400, bc: BLUE, lc: BLUE, ls: 0.08 };
+        var o = { size: 21, max: W - 70, family: FRANKLIN, bw: 700, lw: 400, bc: c.text, lc: c.text, ls: 0.08 };
         var m = measure(ctx, o), t = draw(ctx, m, o, 0, PAD + m.asc), mid = t.top + (m.asc - m.cap) + m.cap / 2;
-        diamond(ctx, t.right + 20, mid, 6, GOLD);
-        if (t.right + 60 < W) bar(ctx, t.right + 36, mid - 0.75, W, 1.5, NAVY);
+        diamond(ctx, t.right + 20, mid, 6, c.mark);
+        if (t.right + 60 < W) bar(ctx, t.right + 36, mid - 0.75, W, 1.5, c.hair);
         return Math.max(t.bottom, mid + 6);
       }
-    },
+    };
+  }
+
+  // Level 1 functions draw a strip L1_H tall. Level 2 and 3 functions draw from the top
+  // (with PAD above the tallest letters) and return the y of their lowest mark; the image
+  // is then cropped to that plus PAD.
+  var STYLES = {
+    // Double keyline, diamond ornaments, double rules.
+    collegiate: collegiate({ field: BLUE, text1: WHITE, trim: GOLD, text: BLUE, heavy: NAVY, light: GOLD, mark: GOLD, hair: NAVY }),
+    // The same layout on a gold field, with no navy: blue keylines and blue and gold rules.
+    'collegiate-gold': collegiate({ field: GOLD, text1: BLUE, trim: BLUE, text: BLUE, heavy: GOLD, light: BLUE, mark: GOLD, hair: BLUE }),
     // Letter-sweater stripes, star seal, condensed athletic lettering.
     varsity: {
       1: function (ctx) {
