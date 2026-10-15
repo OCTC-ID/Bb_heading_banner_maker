@@ -6,7 +6,7 @@
 <title>Heading Banner Maker | OCTC Bb Tools</title>
 <link rel="icon" type="image/png" sizes="48x48" href="../images/icon-48.png">
 <link rel="apple-touch-icon" href="../images/icon-180.png">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;800&family=Comic+Neue:wght@400;700&family=Libre+Franklin:wght@400;500;700;800&family=Source+Sans+3:wght@300;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;800&family=Comic+Neue:wght@400;700&family=Libre+Franklin:wght@400;500;700;800&family=Source+Sans+3:wght@300;400;700&display=swap">
 <style>
   /* Layout: the banner being made sits on top at full width; style and level
      pickers below it are live thumbnails; text and export controls follow. */
@@ -16,22 +16,22 @@
     --fg: #16213A;
     --muted: #57627F;
     --line: #D2D9E6;
-    --action: #0F2347;
+    --action: #00467F;
     --action-fg: #FFFFFF;
-    --mark: #E9B425;
+    --mark: #E7A614;
     --plate: #E3E8F1;
     --font: "Libre Franklin", "Segoe UI", system-ui, -apple-system, Arial, sans-serif;
   }
   @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) {
       --bg: #0D1525; --surface: #162138; --fg: #E9EDF6; --muted: #9BA7C1;
-      --line: #2C3957; --action: #E9B425; --action-fg: #0F2347; --mark: #E9B425;
+      --line: #2C3957; --action: #E7A614; --action-fg: #011D41; --mark: #E7A614;
       --plate: #0A101C; color-scheme: dark;
     }
   }
   :root[data-theme="dark"] {
     --bg: #0D1525; --surface: #162138; --fg: #E9EDF6; --muted: #9BA7C1;
-    --line: #2C3957; --action: #E9B425; --action-fg: #0F2347; --mark: #E9B425;
+    --line: #2C3957; --action: #E7A614; --action-fg: #011D41; --mark: #E7A614;
     --plate: #0A101C; color-scheme: dark;
   }
 
@@ -109,6 +109,7 @@
   #status { margin: 0; font-size: 14px; color: var(--muted); min-width: 0; }
 
   .alt { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding-top: 16px; border-top: 1px solid var(--line); }
+  .a11y { margin: 0; flex-basis: 100%; font-size: 14px; color: var(--muted); max-width: 72ch; }
   .alt code {
     font-family: var(--font); font-size: 15px;
     padding: 6px 10px; background: var(--surface);
@@ -184,12 +185,13 @@
         <span class="hint">Leave empty for an all-bold heading.</span>
       </div>
       <div class="field">
-        <label for="size">Image width</label>
-        <select id="size">
-          <option value="1">1200 px (Blackboard minimum)</option>
-          <option value="2" selected>2400 px</option>
-          <option value="4">4800 px (sharpest)</option>
+        <label for="size">Download resolution</label>
+        <select id="size" aria-describedby="size-hint">
+          <option value="1">Standard (1200 px wide)</option>
+          <option value="2" selected>High (2400 px wide)</option>
+          <option value="4">Extra high (4800 px wide)</option>
         </select>
+        <span class="hint" id="size-hint">Higher resolution keeps the heading sharp on high-density screens. Blackboard decides how wide the image displays and may add its own space around image blocks.</span>
       </div>
       <div class="field">
         <span class="label">Letter case</span>
@@ -210,6 +212,7 @@
     <span class="label">Alt text for Blackboard:</span>
     <code id="alt-text"></code>
     <button type="button" class="quiet" id="copy-alt">Copy</button>
+    <p class="a11y"><strong>Keep a real heading too.</strong> A graphic heading does not add document structure, so screen readers and the document outline can't find it. Use a Blackboard text heading (Heading 2, Heading 3) for each section. If that text heading repeats the image's words, mark the image as decorative instead of adding alt text.</p>
   </section>
 
   <footer><p class="eeo" style="margin:0;font-size:13px;line-height:1.55;">The Kentucky Community and Technical College System is an equal educational and employment opportunity institution and does not discriminate on the basis of race, religion, color, sex, gender identity, gender presentation, national origin, age, disability, family medical history, or genetic information. Further, we vigilantly prevent discrimination based on sexual orientation, parental status, marital status, political affiliation, military service, or any other non-merit based factor.</p></footer>
@@ -218,57 +221,97 @@
 
 <script>
 (function () {
-  var NAVY = '#0F2347', GOLD = '#E9B425', WHITE = '#FFFFFF', RULE = '#C9D3E3';
-  // Base heights at 1200 px wide. Level 1 is Blackboard's 5:1 banner. Levels 2 and 3 are
-  // trimmed to their content so they sit close to the text placed under them.
-  var HEIGHTS = {
-    collegiate: { 1: 240, 2: 86, 3: 36 },
-    varsity: { 1: 240, 2: 106, 3: 79 },
-    minimal: { 1: 240, 2: 88, 3: 62 },
-    playful: { 1: 240, 2: 92, 3: 66 }
-  };
-  var W = 1200;
+  // KCTCS brand palette (kctcs.edu brand guide). RULE is a 20% tint of the primary blue.
+  var BLUE = '#00467F', NAVY = '#011D41', GOLD = '#E7A614', WHITE = '#FFFFFF', RULE = '#CCDAE5';
+  var W = 1200;          // base width; every coordinate below is at 1200 px wide
+  var L1_H = 120;        // Level 1 is a slim filled title strip
+  var PAD = 3;           // white margin kept above and below Level 2 and 3 artwork
+  var SCRATCH_H = 300;   // Level 2 and 3 are drawn on a tall canvas, then cropped to their content
   var STYLE_NAMES = ['collegiate', 'varsity', 'minimal', 'playful'];
 
   var state = { style: 'collegiate', level: 1 };
   var el = function (id) { return document.getElementById(id); };
+  var boxes = []; // bounds of everything drawn, kept for the clipping checks
 
   function words() {
     var b = el('bold-text').value.trim(), l = el('light-text').value.trim();
-    if (el('caps').checked) { b = b.toUpperCase(); l = l.toUpperCase(); }
-    return { bold: b, light: l };
+    var caps = el('caps').checked;
+    if (caps) { b = b.toUpperCase(); l = l.toUpperCase(); }
+    return { bold: b, light: l, caps: caps };
   }
 
-  // Draws bold + light text on one line, shrinking to fit o.max.
-  // o: x, y, size, max, align, family, bw, lw (weights), bc, lc (colors), ls (letter spacing, em)
-  // Returns the left and right edges of the text.
-  function text(ctx, o) {
+  function setFont(ctx, weight, size, o) {
+    ctx.font = weight + ' ' + size + 'px ' + o.family;
+    if ('letterSpacing' in ctx) ctx.letterSpacing = (size * (o.ls || 0)) + 'px';
+  }
+
+  // Lays out bold + light text on one line, shrinking it to fit o.max.
+  // o: size, max, family, bw, lw (weights), bc, lc (colors), ls (letter spacing, em)
+  // Returns the size used, widths, and vertical metrics. The vertical metrics cover the
+  // actual letters plus reference letters: tall lowercase letters and descenders whenever
+  // lowercase is on, so a lowercase heading keeps room for descenders even without any.
+  function measure(ctx, o) {
     var t = words(), s = o.size, bw, lw, gap;
-    var font = function (weight) { return weight + ' ' + s + 'px ' + o.family; };
     for (;;) {
-      if ('letterSpacing' in ctx) ctx.letterSpacing = (s * (o.ls || 0)) + 'px';
-      ctx.font = font(o.bw); bw = t.bold ? ctx.measureText(t.bold).width : 0;
-      ctx.font = font(o.lw); lw = t.light ? ctx.measureText(t.light).width : 0;
+      setFont(ctx, o.bw, s, o); bw = t.bold ? ctx.measureText(t.bold).width : 0;
+      setFont(ctx, o.lw, s, o); lw = t.light ? ctx.measureText(t.light).width : 0;
       gap = (t.bold && t.light) ? s * 0.3 : 0;
-      if (bw + gap + lw <= o.max || s <= 14) break;
+      if (bw + gap + lw <= o.max || s <= 10) break;
       s -= 1;
     }
-    var total = bw + gap + lw;
-    var x = o.align === 'center' ? o.x - total / 2 : o.x;
-    ctx.textBaseline = 'middle'; ctx.textAlign = 'left';
-    ctx.font = font(o.bw); ctx.fillStyle = o.bc; if (t.bold) ctx.fillText(t.bold, x, o.y);
-    ctx.font = font(o.lw); ctx.fillStyle = o.lc; if (t.light) ctx.fillText(t.light, x + bw + gap, o.y);
+    var refUp = t.caps ? 'H' : 'Hbdfl', refDown = t.caps ? 'H' : 'gjpqy';
+    var asc = 0, desc = 0, cap = 0;
+    [o.bw, o.lw].forEach(function (w) {
+      setFont(ctx, w, s, o);
+      var up = ctx.measureText(refUp), down = ctx.measureText(refDown);
+      asc = Math.max(asc, up.actualBoundingBoxAscent);
+      desc = Math.max(desc, down.actualBoundingBoxDescent);
+      cap = Math.max(cap, ctx.measureText('H').actualBoundingBoxAscent);
+    });
+    [[o.bw, t.bold], [o.lw, t.light]].forEach(function (p) {
+      if (!p[1]) return;
+      setFont(ctx, p[0], s, o);
+      var m = ctx.measureText(p[1]);
+      asc = Math.max(asc, m.actualBoundingBoxAscent);
+      desc = Math.max(desc, m.actualBoundingBoxDescent);
+    });
+    // Some letters (A, J, W) reach a pixel or two left of where they are drawn; shift the
+    // whole line right by that much so a flush-left heading is never clipped.
+    var lead = 0, first = t.bold ? [o.bw, t.bold] : [o.lw, t.light];
+    if (first[1]) { setFont(ctx, first[0], s, o); lead = Math.max(0, ctx.measureText(first[1]).actualBoundingBoxLeft); }
     if ('letterSpacing' in ctx) ctx.letterSpacing = '0px';
-    return { left: x, right: x + total };
+    // Letter spacing adds a gap after the last letter; leave it out of the width.
+    var total = bw + gap + lw - (('letterSpacing' in ctx) ? s * (o.ls || 0) : 0);
+    return { t: t, s: s, bw: bw, gap: gap, lw: lw, total: Math.max(0, total), asc: asc, desc: desc, cap: cap, lead: Math.ceil(lead) };
   }
 
+  // Draws measured text with its left edge at x and its baseline at y. Returns its edges.
+  function draw(ctx, m, o, x, y) {
+    x += m.lead;
+    ctx.textBaseline = 'alphabetic'; ctx.textAlign = 'left';
+    [[o.bw, o.bc, m.t.bold, x], [o.lw, o.lc, m.t.light, x + m.bw + m.gap]].forEach(function (p) {
+      if (!p[2]) return;
+      setFont(ctx, p[0], m.s, o); ctx.fillStyle = p[1];
+      ctx.fillText(p[2], p[3], y);
+      var r = ctx.measureText(p[2]);
+      boxes.push({ what: 'text', x1: p[3] - r.actualBoundingBoxLeft, x2: p[3] + r.actualBoundingBoxRight, y1: y - r.actualBoundingBoxAscent, y2: y + r.actualBoundingBoxDescent });
+    });
+    if ('letterSpacing' in ctx) ctx.letterSpacing = '0px';
+    return { left: x, right: x + m.total, top: y - m.asc, bottom: y + m.desc };
+  }
+
+  function box(what, x1, y1, x2, y2) { boxes.push({ what: what, x1: x1, y1: y1, x2: x2, y2: y2 }); }
   function fill(ctx, H, color) { ctx.fillStyle = color; ctx.fillRect(0, 0, W, H); }
-  function line(ctx, x1, y, x2, w, color) { ctx.fillStyle = color; ctx.fillRect(x1, y - w / 2, x2 - x1, w); }
-  function frame(ctx, inset, H, w, color) { ctx.strokeStyle = color; ctx.lineWidth = w; ctx.strokeRect(inset, inset, W - 2 * inset, H - 2 * inset); }
+  // A horizontal bar from x1 to x2 whose top edge is at `top`.
+  function bar(ctx, x1, top, x2, h, color) { ctx.fillStyle = color; ctx.fillRect(x1, top, x2 - x1, h); box('bar', x1, top, x2, top + h); }
+  function frame(ctx, inset, H, w, color) {
+    ctx.strokeStyle = color; ctx.lineWidth = w; ctx.strokeRect(inset, inset, W - 2 * inset, H - 2 * inset);
+    box('frame', inset - w / 2, inset - w / 2, W - inset + w / 2, H - inset + w / 2);
+  }
   function diamond(ctx, x, y, r, color) {
     ctx.fillStyle = color; ctx.beginPath();
     ctx.moveTo(x, y - r); ctx.lineTo(x + r, y); ctx.lineTo(x, y + r); ctx.lineTo(x - r, y);
-    ctx.closePath(); ctx.fill();
+    ctx.closePath(); ctx.fill(); box('diamond', x - r, y - r, x + r, y + r);
   }
   function star(ctx, x, y, R, color) {
     ctx.fillStyle = color; ctx.beginPath();
@@ -276,11 +319,14 @@
       var a = -Math.PI / 2 + i * Math.PI / 5, r = i % 2 ? R * 0.42 : R;
       ctx.lineTo(x + r * Math.cos(a), y + r * Math.sin(a));
     }
-    ctx.closePath(); ctx.fill();
+    ctx.closePath(); ctx.fill(); box('star', x - R, y - R, x + R, y + R);
   }
-  function ring(ctx, x, y, r, w, color) { ctx.strokeStyle = color; ctx.lineWidth = w; ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.stroke(); }
-
-  // A hand-drawn-looking wavy line from x1 to x2.
+  function ring(ctx, x, y, r, w, color) {
+    ctx.strokeStyle = color; ctx.lineWidth = w; ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.stroke();
+    box('ring', x - r - w / 2, y - r - w / 2, x + r + w / 2, y + r + w / 2);
+  }
+  function dot(ctx, x, y, r, color) { ctx.fillStyle = color; ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill(); box('dot', x - r, y - r, x + r, y + r); }
+  // A hand-drawn-looking wavy line from x1 to x2, centered on y; it swings about amp above and below.
   function wave(ctx, x1, x2, y, amp, len, w, color) {
     ctx.strokeStyle = color; ctx.lineWidth = w; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
     ctx.beginPath(); ctx.moveTo(x1, y);
@@ -289,6 +335,7 @@
       ctx.quadraticCurveTo(x1 + step * (i + 0.5), y + (i % 2 ? amp : -amp) * 2, x1 + step * (i + 1), y);
     }
     ctx.stroke(); ctx.lineCap = 'butt';
+    box('wave', x1 - w / 2, y - amp - w / 2, x2 + w / 2, y + amp + w / 2);
   }
 
   var COMIC = '"Comic Neue", "Comic Sans MS", "Chalkboard SE", sans-serif';
@@ -296,105 +343,145 @@
   var BARLOW = '"Barlow Condensed", "Arial Narrow", Arial, sans-serif';
   var SOURCE = '"Source Sans 3", "Segoe UI", Arial, sans-serif';
 
+  // Level 1 functions draw a strip L1_H tall. Level 2 and 3 functions draw from the top
+  // (with PAD above the tallest letters) and return the y of their lowest mark; the image
+  // is then cropped to that plus PAD.
   var STYLES = {
     // Double gold keyline, diamond ornaments, double rules.
     collegiate: {
-      1: function (ctx, H) {
-        fill(ctx, H, NAVY); frame(ctx, 14, H, 4, GOLD); frame(ctx, 23, H, 1.5, GOLD);
-        var t = text(ctx, { x: 600, y: 122, size: 56, max: 800, align: 'center', family: FRANKLIN, bw: 700, lw: 400, bc: WHITE, lc: WHITE, ls: 0.08 });
-        line(ctx, t.left - 150, 120, t.left - 46, 2, GOLD); diamond(ctx, t.left - 30, 120, 9, GOLD);
-        diamond(ctx, t.right + 30, 120, 9, GOLD); line(ctx, t.right + 46, 120, t.right + 150, 2, GOLD);
+      1: function (ctx) {
+        fill(ctx, L1_H, BLUE); frame(ctx, 7, L1_H, 3, GOLD); frame(ctx, 13, L1_H, 1, GOLD);
+        var o = { size: 34, max: 760, family: FRANKLIN, bw: 700, lw: 400, bc: WHITE, lc: WHITE, ls: 0.08 };
+        var m = measure(ctx, o), cy = L1_H / 2, flank = true;
+        // A long heading drops the side ornaments so it can use the full width instead of shrinking.
+        if (m.s < o.size * 0.85) { o.max = W - 80; m = measure(ctx, o); flank = false; }
+        var t = draw(ctx, m, o, W / 2 - m.total / 2, cy + m.cap / 2);
+        if (flank && t.left - 110 > 24) {
+          bar(ctx, t.left - 110, cy - 1, t.left - 34, 2, GOLD); diamond(ctx, t.left - 22, cy, 6, GOLD);
+          diamond(ctx, t.right + 22, cy, 6, GOLD); bar(ctx, t.right + 34, cy - 1, t.right + 110, 2, GOLD);
+        }
       },
-      2: function (ctx, H) {
-        fill(ctx, H, WHITE);
-        text(ctx, { x: 0, y: 26, size: 44, max: 1190, family: FRANKLIN, bw: 700, lw: 400, bc: NAVY, lc: NAVY, ls: 0.08 });
-        line(ctx, 0, 70, W, 5, NAVY); line(ctx, 0, 81, W, 2, GOLD);
+      2: function (ctx) {
+        fill(ctx, SCRATCH_H, WHITE);
+        var o = { size: 28, max: W - 4, family: FRANKLIN, bw: 700, lw: 400, bc: BLUE, lc: BLUE, ls: 0.08 };
+        var m = measure(ctx, o), t = draw(ctx, m, o, 0, PAD + m.asc);
+        bar(ctx, 0, t.bottom + 6, W, 3, NAVY); bar(ctx, 0, t.bottom + 12, W, 2, GOLD);
+        return t.bottom + 14;
       },
-      3: function (ctx, H) {
-        fill(ctx, H, WHITE);
-        var t = text(ctx, { x: 0, y: 19, size: 30, max: 1150, family: FRANKLIN, bw: 700, lw: 400, bc: NAVY, lc: NAVY, ls: 0.08 });
-        diamond(ctx, t.right + 28, 17, 10, GOLD);
-        if (t.right + 90 < W) line(ctx, t.right + 52, 17, W, 1.5, NAVY);
+      3: function (ctx) {
+        fill(ctx, SCRATCH_H, WHITE);
+        var o = { size: 21, max: W - 70, family: FRANKLIN, bw: 700, lw: 400, bc: BLUE, lc: BLUE, ls: 0.08 };
+        var m = measure(ctx, o), t = draw(ctx, m, o, 0, PAD + m.asc), mid = t.top + (m.asc - m.cap) + m.cap / 2;
+        diamond(ctx, t.right + 20, mid, 6, GOLD);
+        if (t.right + 60 < W) bar(ctx, t.right + 36, mid - 0.75, W, 1.5, NAVY);
+        return Math.max(t.bottom, mid + 6);
       }
     },
     // Letter-sweater stripes, star seal, condensed athletic lettering.
     varsity: {
-      1: function (ctx, H) {
-        fill(ctx, H, NAVY);
-        line(ctx, 0, 18, W, 10, GOLD); line(ctx, 0, 32, W, 3, WHITE);
-        line(ctx, 0, H - 18, W, 10, GOLD); line(ctx, 0, H - 32, W, 3, WHITE);
-        text(ctx, { x: 64, y: 124, size: 96, max: 880, family: BARLOW, bw: 800, lw: 500, bc: WHITE, lc: GOLD, ls: 0.03 });
-        ring(ctx, 1070, 120, 62, 5, GOLD); ring(ctx, 1070, 120, 52, 1.5, GOLD); star(ctx, 1070, 122, 34, GOLD);
+      1: function (ctx) {
+        fill(ctx, L1_H, BLUE);
+        bar(ctx, 0, 5, W, 6, GOLD); bar(ctx, 0, 15, W, 2, WHITE);
+        bar(ctx, 0, L1_H - 11, W, 6, GOLD); bar(ctx, 0, L1_H - 17, W, 2, WHITE);
+        var o = { size: 52, max: 1010, family: BARLOW, bw: 800, lw: 500, bc: WHITE, lc: GOLD, ls: 0.03 };
+        var m = measure(ctx, o);
+        draw(ctx, m, o, 40, L1_H / 2 + m.cap / 2);
+        ring(ctx, 1136, 60, 29, 3, GOLD); ring(ctx, 1136, 60, 24, 1, GOLD); star(ctx, 1136, 61, 16, GOLD);
       },
-      2: function (ctx, H) {
-        fill(ctx, H, WHITE);
-        var t = text(ctx, { x: 0, y: 38, size: 70, max: 1120, family: BARLOW, bw: 800, lw: 500, bc: NAVY, lc: NAVY, ls: 0.03 });
-        star(ctx, t.right + 44, 36, 24, GOLD);
-        line(ctx, 0, 90, W, 8, NAVY); line(ctx, 0, 102, W, 3, GOLD);
+      2: function (ctx) {
+        fill(ctx, SCRATCH_H, WHITE);
+        var o = { size: 40, max: W - 50, family: BARLOW, bw: 800, lw: 500, bc: BLUE, lc: BLUE, ls: 0.03 };
+        var m = measure(ctx, o), t = draw(ctx, m, o, 0, PAD + m.asc);
+        if (t.right + 36 < W) star(ctx, t.right + 22, t.top + (m.asc - m.cap) + m.cap / 2, 12, GOLD);
+        bar(ctx, 0, t.bottom + 6, W, 5, NAVY); bar(ctx, 0, t.bottom + 14, W, 2, GOLD);
+        return t.bottom + 16;
       },
-      3: function (ctx, H) {
-        fill(ctx, H, WHITE);
-        var t = text(ctx, { x: 0, y: 27, size: 48, max: 1190, family: BARLOW, bw: 800, lw: 500, bc: NAVY, lc: NAVY, ls: 0.03 });
-        line(ctx, 0, 65, t.right, 6, NAVY); line(ctx, 0, 75, t.right, 3, GOLD);
+      3: function (ctx) {
+        fill(ctx, SCRATCH_H, WHITE);
+        var o = { size: 30, max: W - 4, family: BARLOW, bw: 800, lw: 500, bc: BLUE, lc: BLUE, ls: 0.03 };
+        var m = measure(ctx, o), t = draw(ctx, m, o, 0, PAD + m.asc);
+        bar(ctx, 0, t.bottom + 5, t.right, 4, NAVY); bar(ctx, 0, t.bottom + 11, t.right, 2, GOLD);
+        return t.bottom + 13;
       }
     },
     // Type and one short gold bar.
     minimal: {
-      1: function (ctx, H) {
-        fill(ctx, H, NAVY);
-        text(ctx, { x: 64, y: 108, size: 72, max: 1070, family: SOURCE, bw: 700, lw: 300, bc: WHITE, lc: WHITE, ls: 0.02 });
-        ctx.fillStyle = GOLD; ctx.fillRect(64, 164, 96, 6);
+      1: function (ctx) {
+        fill(ctx, L1_H, BLUE);
+        var o = { size: 42, max: W - 80, family: SOURCE, bw: 700, lw: 300, bc: WHITE, lc: WHITE, ls: 0.02 };
+        var m = measure(ctx, o), group = m.cap + 12 + 4, top = (L1_H - group) / 2;
+        draw(ctx, m, o, 40, top + m.cap);
+        bar(ctx, 40, top + m.cap + 12, 100, 4, GOLD);
       },
-      2: function (ctx, H) {
-        fill(ctx, H, WHITE);
-        text(ctx, { x: 0, y: 30, size: 54, max: 1190, family: SOURCE, bw: 700, lw: 300, bc: NAVY, lc: NAVY, ls: 0.02 });
-        ctx.fillStyle = GOLD; ctx.fillRect(0, 78, 96, 6);
+      2: function (ctx) {
+        fill(ctx, SCRATCH_H, WHITE);
+        var o = { size: 34, max: W - 4, family: SOURCE, bw: 700, lw: 300, bc: BLUE, lc: BLUE, ls: 0.02 };
+        var m = measure(ctx, o), t = draw(ctx, m, o, 0, PAD + m.asc);
+        bar(ctx, 0, t.bottom + 6, 64, 4, GOLD);
+        return t.bottom + 10;
       },
-      3: function (ctx, H) {
-        fill(ctx, H, WHITE);
-        text(ctx, { x: 0, y: 22, size: 38, max: 1190, family: SOURCE, bw: 700, lw: 300, bc: NAVY, lc: NAVY, ls: 0.02 });
-        line(ctx, 0, 60, W, 2, RULE); line(ctx, 0, 60, 48, 2, GOLD);
+      3: function (ctx) {
+        fill(ctx, SCRATCH_H, WHITE);
+        var o = { size: 26, max: W - 4, family: SOURCE, bw: 700, lw: 400, bc: BLUE, lc: BLUE, ls: 0.02 };
+        var m = measure(ctx, o), t = draw(ctx, m, o, 0, PAD + m.asc);
+        bar(ctx, 0, t.bottom + 5, W, 1.5, RULE); bar(ctx, 0, t.bottom + 5, 36, 1.5, GOLD);
+        return t.bottom + 6.5;
       }
     },
     // Rounded, friendly lettering with a wavy gold underline.
     playful: {
-      1: function (ctx, H) {
-        fill(ctx, H, NAVY);
-        var t = text(ctx, { x: 64, y: 104, size: 80, max: 900, family: COMIC, bw: 700, lw: 400, bc: WHITE, lc: WHITE, ls: 0.01 });
-        wave(ctx, 66, t.right - 2, 166, 5, 44, 7, GOLD);
-        ring(ctx, 1076, 96, 30, 7, GOLD);
-        ctx.fillStyle = GOLD; ctx.beginPath(); ctx.arc(1136, 150, 9, 0, Math.PI * 2); ctx.fill();
-        ctx.fillStyle = WHITE; ctx.fillRect(1010, 160, 26, 6); ctx.fillRect(1020, 150, 6, 26);
+      1: function (ctx) {
+        fill(ctx, L1_H, BLUE);
+        var o = { size: 44, max: 1000, family: COMIC, bw: 700, lw: 400, bc: WHITE, lc: WHITE, ls: 0.01 };
+        var m = measure(ctx, o), group = m.cap + 12 + 10, top = (L1_H - group) / 2;
+        var t = draw(ctx, m, o, 40, top + m.cap);
+        wave(ctx, 42, Math.max(t.right - 2, 120), top + m.cap + 17, 3, 30, 4, GOLD);
+        ring(ctx, 1112, 46, 14, 4, GOLD); dot(ctx, 1152, 80, 5, GOLD);
+        bar(ctx, 1066, 80, 1080, 4, WHITE); bar(ctx, 1071, 75, 1075, 14, WHITE);
       },
-      2: function (ctx, H) {
-        fill(ctx, H, WHITE);
-        var t = text(ctx, { x: 0, y: 32, size: 58, max: 1190, family: COMIC, bw: 700, lw: 400, bc: NAVY, lc: NAVY, ls: 0.01 });
-        wave(ctx, 4, t.right - 2, 78, 4, 40, 6, GOLD);
+      2: function (ctx) {
+        fill(ctx, SCRATCH_H, WHITE);
+        var o = { size: 36, max: W - 4, family: COMIC, bw: 700, lw: 400, bc: BLUE, lc: BLUE, ls: 0.01 };
+        var m = measure(ctx, o), t = draw(ctx, m, o, 0, PAD + m.asc);
+        wave(ctx, 3, Math.max(t.right - 2, 90), t.bottom + 10, 3, 30, 4, GOLD);
+        return t.bottom + 15;
       },
-      3: function (ctx, H) {
-        fill(ctx, H, WHITE);
-        text(ctx, { x: 0, y: 23, size: 40, max: 1190, family: COMIC, bw: 700, lw: 400, bc: NAVY, lc: NAVY, ls: 0.01 });
-        wave(ctx, 3, 123, 56, 3, 30, 4.5, GOLD);
+      3: function (ctx) {
+        fill(ctx, SCRATCH_H, WHITE);
+        var o = { size: 27, max: W - 4, family: COMIC, bw: 700, lw: 400, bc: BLUE, lc: BLUE, ls: 0.01 };
+        var m = measure(ctx, o), t = draw(ctx, m, o, 0, PAD + m.asc);
+        wave(ctx, 2.5, 92, t.bottom + 7, 2, 22, 3, GOLD);
+        return t.bottom + 10.5;
       }
     }
   };
 
+  // Draws a heading at the given scale. Level 1 is a fixed strip; Levels 2 and 3 are drawn
+  // on a tall canvas and cropped to their artwork plus PAD, at full width.
   function render(style, level, scale) {
-    var H = HEIGHTS[style][level];
+    boxes = [];
+    var tall = level === 1 ? L1_H : SCRATCH_H;
+    var scratch = document.createElement('canvas');
+    scratch.width = Math.round(W * scale); scratch.height = Math.round(tall * scale);
+    var sctx = scratch.getContext('2d');
+    sctx.scale(scale, scale);
+    var bottom = STYLES[style][level](sctx);
+    var H = level === 1 ? L1_H : Math.ceil(bottom + PAD);
     var c = document.createElement('canvas');
-    c.width = Math.round(W * scale); c.height = Math.round(H * scale);
-    var ctx = c.getContext('2d');
-    ctx.scale(scale, scale);
-    STYLES[style][level](ctx, H);
+    c.width = scratch.width; c.height = Math.round(H * scale);
+    c.getContext('2d').drawImage(scratch, 0, 0);
+    c.baseHeight = H; c.boxes = boxes;
     return c;
   }
+  window.headingBannerDebug = { render: render }; // used by the automated layout checks
 
   function altText() {
     return (el('bold-text').value.trim() + ' ' + el('light-text').value.trim()).trim();
   }
 
   function fileName() {
-    var slug = altText().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'heading';
+    var plain = altText().normalize ? altText().normalize('NFD').replace(/[\u0300-\u036f]/g, '') : altText();
+    var slug = plain.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'heading';
     return slug + '-level-' + state.level + '.png';
   }
 
