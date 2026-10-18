@@ -2,12 +2,12 @@
 
 Small tools for building Blackboard Ultra courses at OCTC. Each one makes a PNG in KCTCS blue (or navy) and gold that you download and add to your course.
 
-**Use the tools:** https://octc-id.github.io/Bb_tools/
+**Use the tools:** https://octc-instructional-design.github.io/Bb_tools/
 
 | Tool | What it makes | Link |
 |---|---|---|
-| Course Banner Maker | The banner at the top of a course: a title, an optional subtitle such as the term, in navy or gold | https://octc-id.github.io/Bb_tools/course-banner/ |
-| Heading Banner Maker | Level 1, 2, and 3 heading banners for pages inside a course | https://octc-id.github.io/Bb_tools/headings/ |
+| Course Banner Maker | The banner at the top of a course: a title, an optional subtitle such as the term, in navy or gold | https://octc-instructional-design.github.io/Bb_tools/course-banner/ |
+| Heading Banner Maker | Level 1, 2, and 3 heading banners for pages inside a course | https://octc-instructional-design.github.io/Bb_tools/headings/ |
 
 Both tools offer the Collegiate, Varsity, Minimal, and Playful styles. The heading banner maker adds Collegiate Gold (the Collegiate layout on a gold field, with no navy). The course banner maker adds Plate, Band, and Label.
 
